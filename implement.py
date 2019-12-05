@@ -65,7 +65,7 @@ def random_crop(data,crop_shape):
 def random_flip_left_right(item):
 	for item in data:
 		if bool(random.getrandbits(1)):
-			item=np.fliplr(item)
+			item=np.fliplr(item) 
 	return data
 
 def color_prepocess(train_data,test_data):
