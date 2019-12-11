@@ -1,6 +1,6 @@
 # DenseNet-Tensorflow
 **Not finished yet**  
-Implementing by Tensorflow, train and evaluate DenseNet based on CIFAR-100 dataset. 
+Implementing by Tensorflow, it trains and evaluates DenseNet based on CIFAR-100 dataset. 
 We have trained the network and release the [weight files](https://drive.google.com/open?id=1lUXFS7Dn7e8YUnVTLsJREvWUJ62yoc0A). The accuracy reaches 81.7% after training for 300 epoches. 
 ## How to Use
 1. Download CIFAR-100 dataset(the Python version) from [here](http://www.cs.toronto.edu/~kriz/cifar.html)
