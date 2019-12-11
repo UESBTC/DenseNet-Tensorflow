@@ -3,7 +3,6 @@ import os
 import sys
 import pickle
 import numpy as np
-import cv2 as cv
 import random
 
 dataset_dir = './cifar-100-python/'
@@ -20,7 +19,7 @@ def unpickle(file):
 def load_data(filename, lbl_cnt):
     data_dict = unpickle(dataset_dir + filename)
     data = data_dict[b'data']
-    labels = data_dict[b'fine_labels']
+    labels = data_dict[b'coarse_labels']#fine_labels
     data = data.reshape(-1, channel_num, img_size, img_size)
     data = data.transpose(0, 2, 3, 1)
     labels = [[(int)(i == label) for i in range(lbl_cnt)] for label in labels]
@@ -34,7 +33,7 @@ def prepare_data():
         sys.exit(1)
     print('Loading data...')
     label_dict = unpickle(dataset_dir + 'meta')
-    label_count = len(label_dict[b'fine_label_names'])
+    label_count = len(label_dict[b'coarse_label_names'])#label
     train_data, train_labels = load_data('train', label_count)
     test_data, test_labels = load_data('test', label_count)
     ind = np.random.permutation(train_data.shape[0])

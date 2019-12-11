@@ -3,18 +3,17 @@ import tflearn
 from implement import *
 from tensorflow.contrib.framework import arg_scope
 
-class_num = 100
+class_num = 20
 dropout_rate = 0.2
 image_size = 32
 channel_num = 3
 growth_rate = 12
-init_learning_rate = 1e-4
-epsilon = 1e-4
+init_learning_rate = 0.1
+# epsilon = 1e-4
 total_epoch = 300
-iteration = 782
-test_iteration = 157
-batch_size = 64
 
+batch_size = 64
+iteration = 50000//batch_size+1
 
 def conv_layer(x, filter_num, kernel_size, stride=1, scope=None):
     with tf.name_scope(scope):
@@ -104,11 +103,11 @@ class DenseNet:
     def dense_net(self, x):
         x = conv_layer(x, filter_num=2 * self.k, kernel_size=[7, 7], stride=2)
 
-        x = self.dense_block(x, num_in_block=16, scope='dense_0')
+        x = self.dense_block(x, num_in_block=16, scope='dense_0')#16
         x = self.transition_block(x, scope='trans_0')
-        x = self.dense_block(x, num_in_block=16, scope='dense_1')
+        x = self.dense_block(x, num_in_block=16, scope='dense_1')#16
         x = self.transition_block(x, scope='trans_1')
-        x = self.dense_block(x, num_in_block=16, scope='dense_2')
+        x = self.dense_block(x, num_in_block=16, scope='dense_2')#16
         x = batch_normalization(x, training=self.training, scope='bn')
         x = relu(x)
         x = global_average_pooling(x)
@@ -126,13 +125,15 @@ def train():
     train_data, test_data = color_preprocess(train_data, test_data)
     x = tf.placeholder(tf.float32, shape=[None, image_size, image_size, channel_num])
     y_ = tf.placeholder(tf.float32, shape=[None, class_num])
+    ema=tf.train.ExponentialMoving()
     training_flag = tf.placeholder(tf.bool)
     learning_rate = tf.placeholder(tf.float32, name='learning_rate')
 
     logits = DenseNet(data=x, k=growth_rate, training=training_flag).model
-    cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=y_, logits=logits))
+    cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=y_, logits=logits))
 
-    train = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=epsilon).minimize(cost)
+    # train = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=epsilon).minimize(cost)
+    train = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
     correct_prediction = tf.equal(tf.argmax(logits, 1), tf.argmax(y_, 1))
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     saver = tf.train.Saver()
@@ -146,7 +147,7 @@ def train():
         cur_learning_rate = init_learning_rate
         for epoch in range(1, total_epoch + 1):
             if epoch == (0.5 * total_epoch) or epoch == (0.75 * total_epoch):
-                epoch /= 10
+                cur_learning_rate /= 10
             pre_ind = 0
             train_loss = 0.0
             train_acc = 0.0
@@ -167,7 +168,7 @@ def train():
                 }
                 _, batch_loss = sess.run([train, cost], feed_dict=train_feed_dict)
                 batch_acc = accuracy.eval(feed_dict=train_feed_dict)
-                print('step: %d, acc: %.4f, loss: %.4f' % (step, batch_acc, batch_loss))
+                # print('step: %d, acc: %.4f, loss: %.4f' % (step, batch_acc, batch_loss))
                 train_loss += batch_loss
                 train_acc += batch_acc
                 pre_ind += batch_size
@@ -180,9 +181,9 @@ def train():
                         y_: test_labels,
                         training_flag: False
                     }
-                    _, test_loss, test_acc = sess.run(accuracy, feed_dict=test_feed_dict)
-                    print('epoch:%d/%d, train_loss=%.4f, train_acc=%.4f, test_loss:%.4f, test_acc:%.4f\n' % (
-                        epoch, train_loss, train_acc, test_loss, test_acc))
+                    test_loss, test_acc = sess.run([cost,accuracy], feed_dict=test_feed_dict)
+                    print('epoch:%d/%d, train_loss=%.4f, train_acc=%.4f, test_loss:%.4f, test_acc:%.4f' % (
+                        epoch, total_epoch,train_loss, train_acc, test_loss, test_acc))
         saver.save(sess=sess, save_path='./model/dense.ckpt')
 
 
