@@ -11,14 +11,15 @@ growth_rate = 12
 init_learning_rate = 0.1
 # epsilon = 1e-4
 total_epoch = 300
-
+weight_decay=1e-4
+l2_reg=tf.contrib.layers.l2_regularizer(weight_decay)
 batch_size = 64
 iteration = 50000//batch_size+1
 
 def conv_layer(x, filter_num, kernel_size, stride=1, scope=None):
     with tf.name_scope(scope):
         x = tf.layers.conv2d(inputs=x, use_bias=False, filters=filter_num, kernel_size=kernel_size, strides=stride,
-                             padding='SAME')
+                             padding='SAME',kernel_initializer=tf.contrib.layers.xavier_initializer(),kernel_regularizer=l2_reg)
     return x
 
 
@@ -125,18 +126,25 @@ def train():
     train_data, test_data = color_preprocess(train_data, test_data)
     x = tf.placeholder(tf.float32, shape=[None, image_size, image_size, channel_num])
     y_ = tf.placeholder(tf.float32, shape=[None, class_num])
-    ema=tf.train.ExponentialMoving()
+    # ema=tf.train.ExponentialMoving()
     training_flag = tf.placeholder(tf.bool)
     learning_rate = tf.placeholder(tf.float32, name='learning_rate')
 
+    
+    # reg_term=tf.contrib.layers.apply_regularization(l2_reg, weights_list=None)
+    # print(tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES))
     logits = DenseNet(data=x, k=growth_rate, training=training_flag).model
-    cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=y_, logits=logits))
+    reg_term=tf.losses.get_regularization_loss()
+    cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits_v2(labels=y_, logits=logits))+reg_term
 
     # train = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=epsilon).minimize(cost)
+
     train = tf.train.GradientDescentOptimizer(learning_rate=learning_rate).minimize(cost)
     correct_prediction = tf.equal(tf.argmax(logits, 1), tf.argmax(y_, 1))
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     saver = tf.train.Saver()
+    
+
 
     with tf.Session() as sess:
         ckpt = tf.train.get_checkpoint_state('./model')
